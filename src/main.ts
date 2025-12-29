@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
-
+import { LoggingInterceptor } from './common/Interceptors/logging.interceptors';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -18,6 +18,7 @@ async function bootstrap() {
 
   // Global Exception Filter
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Swagger setup
   const config = new DocumentBuilder()
