@@ -1,5 +1,5 @@
+import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import { User } from '../user/entities/user.entity';
 import { Organization } from '../user/entities/organization.entity';
@@ -14,7 +14,12 @@ export default new DataSource({
   username: process.env.DB_USERNAME || 'user',
   password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_DATABASE || 'myapp',
+  // 1. Register entities here
   entities: [User, Organization],
+  // 2. STOP AUTO-SYNC: Enforce migration-only changes
+  synchronize: false, 
+  // 3. Define where migrations live
   migrations: ['src/database/migrations/*.ts'],
-  synchronize: process.env.NODE_ENV !== 'production', // dev-only: creates tables automatically // Ensure this is false for migration workflow
+  // Optional: Custom table name to track migrations 
+  migrationsTableName: 'migrations_history',
 });

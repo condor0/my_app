@@ -42,7 +42,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
       password: 'password',
       database: 'myapp',
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
     }),
 
     // 4. Feature Entities
