@@ -6,13 +6,14 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index({ unique: true })
-  @Column({ unique: true })
-  email: string;
+  @Column({ unique: true }) 
+  email: string;   
 
   @Column()
-  name: string;
+  password: string; 
 
+  @Column()
+  name: string;     
   // Many users belong to one organization
   @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'CASCADE' })
   organization: Organization;
