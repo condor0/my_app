@@ -2,15 +2,15 @@ import dataSource from '../../config/typeorm.config';
 import { User } from '../../user/entities/user.entity';
 import { Organization } from '../../user/entities/organization.entity';
 
-async function seed() {
+async function seed(): Promise<void> {
   console.log(' Starting database seeding...');
-  
+
   try {
     // 1. Initialize the connection using your existing DataSource config
     if (!dataSource.isInitialized) {
       await dataSource.initialize();
     }
-    
+
     const orgRepo = dataSource.getRepository(Organization);
     const userRepo = dataSource.getRepository(User);
 
@@ -25,7 +25,7 @@ async function seed() {
     // 3. Create Seed Users
     const seedUsers = [
       { name: 'Admin User', email: 'admin@example.com', organization: org },
-      { name: 'Dev User', email: 'dev@example.com', organization: org }
+      { name: 'Dev User', email: 'dev@example.com', organization: org },
     ];
 
     for (const userData of seedUsers) {
@@ -45,4 +45,7 @@ async function seed() {
   }
 }
 
-seed();
+seed().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
