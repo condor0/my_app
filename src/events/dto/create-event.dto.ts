@@ -24,6 +24,7 @@ export class CreateEventDto {
     example: '2026-12-31T10:00:00Z',
     description: 'Event date and time (ISO 8601 format)',
   })
+  @IsNotEmpty()
   @IsDateString()
   date: string;
 

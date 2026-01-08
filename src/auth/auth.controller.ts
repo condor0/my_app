@@ -18,6 +18,7 @@ import {
   ApiUnauthorizedResponse,
   ApiForbiddenResponse,
 } from '@nestjs/swagger';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -29,6 +30,7 @@ import {
   ForbiddenResponseDto,
 } from './dto/response.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';
 import { Roles } from './decorators/roles.decorator';
@@ -38,7 +40,11 @@ import { RolesGuard } from './guards/roles.guard';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    @InjectPinoLogger(AuthController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @ApiOperation({
     summary: 'User signup',
@@ -100,7 +106,7 @@ export class AuthController {
     type: ErrorResponseDto,
   })
   @Get('/me')
-  @UseGuards(AuthGuard())
+  @UseGuards(JwtAuthGuard)
   getProfile(@Request() req: ExpressRequest & { user: User }) {
     return req.user;
   }
@@ -128,7 +134,7 @@ export class AuthController {
     type: ForbiddenResponseDto,
   })
   @Delete('/admin/users/:id')
-  @UseGuards(AuthGuard(), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   deleteUser(
     @Param('id') id: string,
@@ -161,7 +167,7 @@ export class AuthController {
   })
   @HttpCode(200)
   @Post('/moderator/content')
-  @UseGuards(AuthGuard(), RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MODERATOR, Role.ADMIN)
   manageContent(@Request() req: ExpressRequest & { user: User }): {
     message: string;

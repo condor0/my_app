@@ -21,21 +21,28 @@ import {
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiBadRequestResponse,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { RejectEventDto } from './dto/reject-event.dto';
 import { EventResponseDto } from './dto/event-response.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';
 
 @ApiTags('Events')
 @Controller('events')
-@UseGuards(AuthGuard())
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    @InjectPinoLogger(EventsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @ApiOperation({ summary: 'Create a new event (draft)' })
   @ApiResponse({
@@ -125,5 +132,77 @@ export class EventsController {
     @Request() req: ExpressRequest & { user: User },
   ): Promise<void> {
     await this.eventsService.remove(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Submit event for moderation (draft -> pending)' })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event submitted for review',
+    type: EventResponseDto,
+  })
+  @ApiNotFoundResponse({ description: 'Event not found' })
+  @ApiForbiddenResponse({ description: 'Not event owner' })
+  @ApiConflictResponse({
+    description: 'Event is not in draft status',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @HttpCode(200)
+  @Post(':id/submit')
+  submit(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: ExpressRequest & { user: User },
+  ): Promise<EventResponseDto> {
+    return this.eventsService.submit(id, req.user);
+  }
+
+  @ApiOperation({
+    summary: 'Approve event (pending -> published) [Moderator/Admin only]',
+  })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event approved and published',
+    type: EventResponseDto,
+  })
+  @ApiNotFoundResponse({ description: 'Event not found' })
+  @ApiForbiddenResponse({ description: 'Not moderator or admin' })
+  @ApiConflictResponse({
+    description: 'Event is not in pending status',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @HttpCode(200)
+  @Post(':id/approve')
+  approve(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: ExpressRequest & { user: User },
+  ): Promise<EventResponseDto> {
+    return this.eventsService.approve(id, req.user);
+  }
+
+  @ApiOperation({
+    summary: 'Reject event (pending -> rejected) [Moderator/Admin only]',
+  })
+  @ApiParam({ name: 'id', description: 'Event ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event rejected',
+    type: EventResponseDto,
+  })
+  @ApiNotFoundResponse({ description: 'Event not found' })
+  @ApiForbiddenResponse({ description: 'Not moderator or admin' })
+  @ApiConflictResponse({
+    description: 'Event is not in pending status',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiBadRequestResponse({ description: 'Reject reason required' })
+  @HttpCode(200)
+  @Post(':id/reject')
+  reject(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() rejectEventDto: RejectEventDto,
+    @Request() req: ExpressRequest & { user: User },
+  ): Promise<EventResponseDto> {
+    return this.eventsService.reject(id, rejectEventDto, req.user);
   }
 }

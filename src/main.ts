@@ -14,6 +14,8 @@ async function bootstrap(): Promise<void> {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
+      stopAtFirstError: true,
+      skipMissingProperties: false,
     }),
   );
 
