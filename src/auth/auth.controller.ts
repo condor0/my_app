@@ -163,7 +163,7 @@ export class AuthController {
   @Post('/moderator/content')
   @UseGuards(AuthGuard(), RolesGuard)
   @Roles(Role.MODERATOR, Role.ADMIN)
-  manageContent(@Request() req: ExpressRequest & { user: User}): {
+  manageContent(@Request() req: ExpressRequest & { user: User }): {
     message: string;
   } {
     return {

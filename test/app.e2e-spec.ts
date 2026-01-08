@@ -59,8 +59,12 @@ describe('RBAC Authorization (e2e)', () => {
     // Clean up test users before running tests
     const dataSource = app.get(DataSource);
     // Delete events for test users first (if any)
-    await dataSource.query(`DELETE FROM "events" WHERE "ownerId" IN (SELECT id FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com'))`);
-    await dataSource.query(`DELETE FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com')`);
+    await dataSource.query(
+      `DELETE FROM "events" WHERE "ownerId" IN (SELECT id FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com'))`,
+    );
+    await dataSource.query(
+      `DELETE FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com')`,
+    );
   });
 
   afterAll(async () => {

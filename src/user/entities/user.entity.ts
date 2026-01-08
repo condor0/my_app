@@ -19,6 +19,9 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.USER })
   role: Role;
 
+  @Column({ nullable: true })
+  organizationId?: number;
+
   // Many users belong to one organization
   @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'CASCADE' })
   organization: Organization;
