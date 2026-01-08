@@ -1,19 +1,19 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Index } from 'typeorm';
-import { Organization } from './organization.entity'; 
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Organization } from './organization.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true }) 
-  email: string;   
+  @Column({ unique: true })
+  email: string;
 
   @Column()
-  password: string; 
+  password: string;
 
   @Column()
-  name: string;     
+  name: string;
   // Many users belong to one organization
   @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'CASCADE' })
   organization: Organization;

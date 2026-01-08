@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigSe
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
-import { AuthModule } from './auth/auth.module'; 
+import { AuthModule } from './auth/auth.module';
 
 // Controllers
 import { HealthController } from './health/health.controller';
@@ -19,16 +19,17 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 
 @Module({
   imports: [
-    // 1. Configuration 
+    // 1. Configuration
     ConfigModule.forRoot({ isGlobal: true }),
 
     // 2. Structured Logging
     LoggerModule.forRoot({
       pinoHttp: {
         customProps: () => ({ context: 'HTTP' }),
-        transport: process.env.NODE_ENV !== 'production' 
-          ? { target: 'pino-pretty', options: { colorize: true } } 
-          : undefined,
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
       },
     }),
 
@@ -49,8 +50,8 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     }),
 
     // 4. Feature Modules
-    AuthModule, 
-    TypeOrmModule.forFeature([User, Organization]), 
+    AuthModule,
+    TypeOrmModule.forFeature([User, Organization]),
   ],
   controllers: [HealthController, UsersController],
   providers: [
@@ -58,12 +59,11 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
+    LoggingInterceptor,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CorrelationIdMiddleware)
-      .forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
   }
 }

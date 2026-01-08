@@ -1,70 +1,175 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from '../user/entities/user.entity'; // Adjust path to your user entity
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-jest.mock('bcrypt');
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import * as argon2 from 'argon2';
+
+jest.mock('argon2');
+
 describe('AuthService', () => {
   let service: AuthService;
-  
-  // 1. Create a Mock Repository
-  const mockUserRepository = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn(),
-    findOne: jest.fn(),
+  let usersRepository: {
+    findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+  };
+  let jwtService: {
+    sign: jest.Mock;
   };
 
-  const mockJwtService = {
-    sign: jest.fn(() => 'test_token'),
+  const mockUser = {
+    id: 1,
+    email: 'test@example.com',
+    name: 'Test User',
+    password: 'hashedPassword',
   };
 
   beforeEach(async () => {
+    usersRepository = {
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+
+    jwtService = {
+      sign: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         {
-          provide: getRepositoryToken(User), // This mocks @InjectRepository(User)
-          useValue: mockUserRepository,
+          provide: getRepositoryToken(User),
+          useValue: usersRepository,
         },
-        { provide: JwtService, useValue: mockJwtService },
+        {
+          provide: JwtService,
+          useValue: jwtService,
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('login', () => {
-    it('should return a token if password matches', async () => {
-  const fakeUser = { email: 'test@test.com', password: 'hashed_password' };
-  mockUserRepository.findOne.mockResolvedValue(fakeUser);
-  
-  // Use this instead of spyOn:
-  (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+  describe('signup', () => {
+    const signupDto = {
+      email: 'test@example.com',
+      password: 'password123',
+      name: 'Test User',
+    };
 
-  const result = await service.login({
-      email: 'test@test.com',
-      password: 'password123'
+    it('should successfully create a new user', async () => {
+      usersRepository.findOne.mockResolvedValue(null);
+      usersRepository.create.mockReturnValue(mockUser as User);
+      usersRepository.save.mockResolvedValue(mockUser as User);
+      (argon2.hash as jest.Mock).mockResolvedValue('hashedPassword');
+
+      await service.signup(signupDto);
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: signupDto.email },
+      });
+      expect(argon2.hash).toHaveBeenCalledWith(signupDto.password);
+      expect(usersRepository.create).toHaveBeenCalledWith({
+        email: signupDto.email,
+        name: signupDto.name,
+        password: 'hashedPassword',
+      });
+      expect(usersRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException if email already exists', async () => {
+      usersRepository.findOne.mockResolvedValue(mockUser as User);
+
+      await expect(service.signup(signupDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.signup(signupDto)).rejects.toThrow(
+        'Email already exists',
+      );
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: signupDto.email },
+      });
+      expect(usersRepository.create).not.toHaveBeenCalled();
+      expect(usersRepository.save).not.toHaveBeenCalled();
+    });
   });
-  
-  expect(result).toEqual({ accessToken: 'test_token' });
-});
 
-    it('should throw UnauthorizedException if password fails', async () => {
-  mockUserRepository.findOne.mockResolvedValue({ password: 'hashed' });
-  
-  // Use this instead of spyOn:
-  (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+  describe('login', () => {
+    const loginDto = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
 
-  await expect(service.login({
-      email: 'test@test.com',
-      password: 'wrong_pass'
-  })).rejects.toThrow(UnauthorizedException);
+    it('should return access token when credentials are valid', async () => {
+      const expectedToken = 'jwt.token.here';
+      usersRepository.findOne.mockResolvedValue(mockUser as User);
+      (argon2.verify as jest.Mock).mockResolvedValue(true);
+      jwtService.sign.mockReturnValue(expectedToken);
+
+      const result = await service.login(loginDto);
+
+      expect(result).toEqual({ accessToken: expectedToken });
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: loginDto.email },
+      });
+      expect(argon2.verify).toHaveBeenCalledWith(
+        mockUser.password,
+        loginDto.password,
+      );
+      expect(jwtService.sign).toHaveBeenCalledWith({
+        email: mockUser.email,
+        sub: mockUser.id,
+      });
+    });
+
+    it('should throw UnauthorizedException when user does not exist', async () => {
+      usersRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'Invalid credentials',
+      );
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: loginDto.email },
+      });
+      expect(jwtService.sign).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when password is incorrect', async () => {
+      usersRepository.findOne.mockResolvedValue(mockUser as User);
+      (argon2.verify as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'Invalid credentials',
+      );
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: loginDto.email },
+      });
+      expect(argon2.verify).toHaveBeenCalledWith(
+        mockUser.password,
+        loginDto.password,
+      );
+      expect(jwtService.sign).not.toHaveBeenCalled();
     });
   });
 });

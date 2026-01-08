@@ -1,9 +1,13 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -22,12 +26,15 @@ export class AuthService {
     const existing = await this.usersRepository.findOne({ where: { email } });
     if (existing) throw new ConflictException('Email already exists');
 
-    // Hash Password
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash Password with argon2
+    const hashedPassword = await argon2.hash(password);
 
     // Create & Save
-    const user = this.usersRepository.create({ email, name, password: hashedPassword });
+    const user = this.usersRepository.create({
+      email,
+      name,
+      password: hashedPassword,
+    });
     await this.usersRepository.save(user);
   }
 
@@ -35,7 +42,7 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.usersRepository.findOne({ where: { email } });
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await argon2.verify(user.password, password))) {
       // Create Payload (what's inside the token)
       const payload = { email: user.email, sub: user.id };
       const accessToken = this.jwtService.sign(payload);

@@ -17,9 +17,9 @@ export default new DataSource({
   // 1. Register entities here
   entities: [User, Organization],
   // 2. STOP AUTO-SYNC: Enforce migration-only changes
-  synchronize: false, 
+  synchronize: false,
   // 3. Define where migrations live
   migrations: ['src/database/migrations/*.ts'],
-  // Optional: Custom table name to track migrations 
+  // Optional: Custom table name to track migrations
   migrationsTableName: 'migrations_history',
 });

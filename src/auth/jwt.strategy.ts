@@ -6,23 +6,28 @@ import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 
-@Injectable()
+interface JwtPayload {
+  sub: number;
+  email: string;
+  // Add other fields you actually use, e.g. role?: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    private configService: ConfigService, 
+    private configService: ConfigService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       // DYNAMICALLY READ FROM ENV
-      secretOrKey: configService.get<string>('JWT_SECRET')!, 
+      secretOrKey: configService.get<string>('JWT_SECRET')!,
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: JwtPayload) {
     const { email } = payload;
     const user = await this.usersRepository.findOne({ where: { email } });
 
