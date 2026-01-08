@@ -47,7 +47,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
-        synchronize: true, // Only for dev!
+        synchronize: configService.get<string>('NODE_ENV') !== 'production', // Only for dev/non-prod!
       }),
     }),
 
