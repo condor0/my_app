@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 interface JwtPayload {
   sub: number;
   email: string;
-  // Add other fields you actually use, e.g. role?: string;
+  role: string;
 }
 
 @Injectable()

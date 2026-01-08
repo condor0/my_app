@@ -5,6 +5,7 @@ import {
   Get,
   UseGuards,
   Request,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,9 @@ import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';
+import { Roles } from './decorators/roles.decorator';
+import { Role } from './enums/role.enum';
+import { RolesGuard } from './guards/roles.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -77,5 +81,53 @@ export class AuthController {
   @UseGuards(AuthGuard())
   getProfile(@Request() req: ExpressRequest & { user: User }) {
     return req.user;
+  }
+
+  @ApiOperation({ summary: 'Admin only - delete user' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'User successfully deleted',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (missing or invalid token)',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden (insufficient permissions)',
+  })
+  @Delete('/admin/users/:id')
+  @UseGuards(AuthGuard(), RolesGuard)
+  @Roles(Role.ADMIN)
+  deleteUser(@Request() req: ExpressRequest & { user: User }): {
+    message: string;
+  } {
+    return { message: `Admin ${req.user.email} can delete users` };
+  }
+
+  @ApiOperation({ summary: 'Moderator+ only - manage content' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Content management successful',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (missing or invalid token)',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden (insufficient permissions)',
+  })
+  @Post('/moderator/content')
+  @UseGuards(AuthGuard(), RolesGuard)
+  @Roles(Role.MODERATOR, Role.ADMIN)
+  manageContent(@Request() req: ExpressRequest & { user: User }): {
+    message: string;
+  } {
+    return {
+      message: `${req.user.role} ${req.user.email} can manage content`,
+    };
   }
 }

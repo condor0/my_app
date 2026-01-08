@@ -44,7 +44,7 @@ export class AuthService {
 
     if (user && (await argon2.verify(user.password, password))) {
       // Create Payload (what's inside the token)
-      const payload = { email: user.email, sub: user.id };
+      const payload = { email: user.email, sub: user.id, role: user.role };
       const accessToken = this.jwtService.sign(payload);
       return { accessToken };
     } else {
