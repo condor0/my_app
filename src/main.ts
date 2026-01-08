@@ -26,9 +26,33 @@ async function bootstrap(): Promise<void> {
 
   // Swagger setup
   const config = new DocumentBuilder()
-    .setTitle('My API')
+    .setTitle('NestJS RBAC API')
+    .setDescription(
+      'API with Role-Based Access Control (RBAC)\n\n' +
+        '**Roles:**\n' +
+        '- USER: Basic user with minimal permissions\n' +
+        '- MODERATOR: Can manage content and user activities\n' +
+        '- ADMIN: Full system access\n\n' +
+        '**Testing Flow:**\n' +
+        '1. Signup a new user\n' +
+        '2. Login to get an access token\n' +
+        '3. Click "Authorize" button and enter: Bearer <your-token>\n' +
+        '4. Test protected endpoints\n' +
+        '5. To test moderator/admin routes, manually update user role in database',
+    )
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addTag('Authentication', 'User authentication and authorization endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

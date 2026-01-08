@@ -6,16 +6,28 @@ import {
   UseGuards,
   Request,
   Delete,
+  Param,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiParam,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import {
+  LoginResponseDto,
+  UserProfileResponseDto,
+  MessageResponseDto,
+  ErrorResponseDto,
+  ForbiddenResponseDto,
+} from './dto/response.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';
@@ -28,7 +40,9 @@ import { RolesGuard } from './guards/roles.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @ApiOperation({ summary: 'User signup' })
+  @ApiOperation({
+    summary: 'User signup',
+  })
   @ApiResponse({
     status: 201,
     description: 'User successfully registered',
@@ -36,46 +50,54 @@ export class AuthController {
   @ApiResponse({
     status: 409,
     description: 'Email already exists',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid input (validation failed)',
+    type: ErrorResponseDto,
   })
   @Post('/signup')
   signup(@Body() signupDto: SignupDto): Promise<void> {
     return this.authService.signup(signupDto);
   }
 
-  @ApiOperation({ summary: 'User login' })
+  @ApiOperation({
+    summary: 'User login',
+  })
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns JWT access token',
-    schema: {
-      example: { accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-    },
+    type: LoginResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Invalid credentials',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid input (validation failed)',
+    type: ErrorResponseDto,
   })
+  @HttpCode(200)
   @Post('/login')
   async login(@Body() loginDto: LoginDto): Promise<{ accessToken: string }> {
     return this.authService.login(loginDto);
   }
 
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get current user profile',
+  })
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({
     status: 200,
     description: 'Returns authenticated user information',
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({
-    status: 401,
+  @ApiUnauthorizedResponse({
     description: 'Unauthorized (missing or invalid token)',
+    type: ErrorResponseDto,
   })
   @Get('/me')
   @UseGuards(AuthGuard())
@@ -83,47 +105,65 @@ export class AuthController {
     return req.user;
   }
 
-  @ApiOperation({ summary: 'Admin only - delete user' })
-  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin only - Delete user',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @ApiParam({
+    name: 'id',
+    description: 'User ID to delete',
+    example: '999',
+  })
   @ApiResponse({
     status: 200,
     description: 'User successfully deleted',
+    type: MessageResponseDto,
   })
-  @ApiResponse({
-    status: 401,
+  @ApiUnauthorizedResponse({
     description: 'Unauthorized (missing or invalid token)',
+    type: ErrorResponseDto,
   })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden (insufficient permissions)',
+  @ApiForbiddenResponse({
+    description: 'Forbidden (insufficient permissions - requires ADMIN role)',
+    type: ForbiddenResponseDto,
   })
   @Delete('/admin/users/:id')
   @UseGuards(AuthGuard(), RolesGuard)
   @Roles(Role.ADMIN)
-  deleteUser(@Request() req: ExpressRequest & { user: User }): {
+  deleteUser(
+    @Param('id') id: string,
+    @Request() req: ExpressRequest & { user: User },
+  ): {
     message: string;
   } {
-    return { message: `Admin ${req.user.email} can delete users` };
+    return {
+      message: `Admin ${req.user.email} can delete user with ID ${id}`,
+    };
   }
 
-  @ApiOperation({ summary: 'Moderator+ only - manage content' })
-  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Moderator+ only - Manage content',
+  })
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({
     status: 200,
     description: 'Content management successful',
+    type: MessageResponseDto,
   })
-  @ApiResponse({
-    status: 401,
+  @ApiUnauthorizedResponse({
     description: 'Unauthorized (missing or invalid token)',
+    type: ErrorResponseDto,
   })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden (insufficient permissions)',
+  @ApiForbiddenResponse({
+    description:
+      'Forbidden (insufficient permissions - requires MODERATOR or ADMIN role)',
+    type: ForbiddenResponseDto,
   })
+  @HttpCode(200)
   @Post('/moderator/content')
   @UseGuards(AuthGuard(), RolesGuard)
   @Roles(Role.MODERATOR, Role.ADMIN)
-  manageContent(@Request() req: ExpressRequest & { user: User }): {
+  manageContent(@Request() req: ExpressRequest & { user: User}): {
     message: string;
   } {
     return {

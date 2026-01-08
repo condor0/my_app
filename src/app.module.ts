@@ -4,6 +4,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 // Controllers
 import { HealthController } from './health/health.controller';
@@ -53,8 +55,9 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     AuthModule,
     TypeOrmModule.forFeature([User, Organization]),
   ],
-  controllers: [HealthController, UsersController],
+  controllers: [AppController, HealthController, UsersController],
   providers: [
+    AppService,
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,

@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { DataSource } from 'typeorm';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -54,11 +55,17 @@ describe('RBAC Authorization (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // Clean up test users before running tests
+    const dataSource = app.get(DataSource);
+    // Delete events for test users first (if any)
+    await dataSource.query(`DELETE FROM "events" WHERE "ownerId" IN (SELECT id FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com'))`);
+    await dataSource.query(`DELETE FROM "users" WHERE email IN ('user@example.com', 'moderator@example.com', 'admin@example.com')`);
   });
 
   afterAll(async () => {
     await app.close();
-  });
+  }, 10000);
 
   describe('Authentication (401 tests)', () => {
     it('should return 401 when accessing protected route without token', () => {
@@ -93,8 +100,12 @@ describe('RBAC Authorization (e2e)', () => {
         .send(testModerator)
         .expect(201);
 
-      // Need to manually set moderator role in DB for testing
-      // In real scenario, admin would promote user to moderator
+      // Update role to moderator
+      const dataSource = app.get(DataSource);
+      await dataSource.query(
+        `UPDATE "users" SET role = 'moderator' WHERE email = $1`,
+        [testModerator.email],
+      );
     });
 
     it('should signup admin successfully', async () => {
@@ -103,7 +114,12 @@ describe('RBAC Authorization (e2e)', () => {
         .send(testAdmin)
         .expect(201);
 
-      // Need to manually set admin role in DB for testing
+      // Update role to admin
+      const dataSource = app.get(DataSource);
+      await dataSource.query(
+        `UPDATE "users" SET role = 'admin' WHERE email = $1`,
+        [testAdmin.email],
+      );
     });
 
     it('should login and return token for user', async () => {

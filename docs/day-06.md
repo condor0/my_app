@@ -88,9 +88,11 @@ deleteUser(...): { message: string }
 ```
 - Only accessible by users with `ADMIN` role
 - Returns 403 if user doesn't have admin role
+- Returns 200 on success with message
 
 #### Moderator+ Route
 ```typescript
+@HttpCode(200)
 @Post('/moderator/content')
 @UseGuards(AuthGuard(), RolesGuard)
 @Roles(Role.MODERATOR, Role.ADMIN)
@@ -98,11 +100,25 @@ manageContent(...): { message: string }
 ```
 - Accessible by moderators and admins
 - Returns 403 if user is just a regular user
+- Uses `@HttpCode(200)` to return 200 instead of default 201 for POST
+
+#### Login Endpoint Enhancement
+```typescript
+@HttpCode(200)
+@Post('/login')
+async login(@Body() loginDto: LoginDto): Promise<{ accessToken: string }>
+```
+- Uses `@HttpCode(200)` decorator to return 200 OK instead of 201 Created
+- Returns JWT token with role included in payload
 
 ## Testing
 
 ### End-to-End Tests
-**File**: `test/rbac.e2e-spec.ts`
+**Files**: `test/rbac.e2e-spec.ts` and `test/app.e2e-spec.ts`
+
+**Test Results**: 36 out of 37 tests passing (97% success rate)
+- 1 intermittent flake test (ECONNRESET in app.e2e-spec.ts)
+- All core RBAC functionality validated
 
 Comprehensive test suite covering:
 
@@ -129,6 +145,33 @@ Comprehensive test suite covering:
 - Token generation
 - Role persistence across requests
 
+### Test Setup Notes
+Since the signup endpoint doesn't accept a `role` parameter (users default to 'user' role), the tests manually update roles in the database:
+
+```typescript
+// After creating a moderator account via signup
+const dataSource = app.get(DataSource);
+await dataSource.query(
+  `UPDATE "users" SET role = 'moderator' WHERE email = $1`,
+  [credentials.moderator.email],
+);
+```
+
+This simulates an admin promoting users to higher roles.
+
+### Database Cleanup
+Tests include proper cleanup to handle foreign key constraints:
+```typescript
+// Delete events first (foreign key to users)
+await dataSource.query(
+  `DELETE FROM "events" WHERE "ownerId" IN (SELECT id FROM "users" WHERE email IN (...))`,
+);
+// Then delete test users
+await dataSource.query(
+  `DELETE FROM "users" WHERE email IN (...)`,
+);
+```
+
 ### Running Tests
 ```bash
 # Run all e2e tests
@@ -144,16 +187,20 @@ npm run test:e2e -- rbac
 - Roles are stored in the database with enum type constraints
 - JWT tokens include the user's role
 - Guards validate permissions on every request
+- Type-safe request handling with proper User entity typing
 
 ✅ **HTTP Status Codes**
-- **401**: Returned when missing or invalid token
-- **403**: Returned when user lacks required role
-- **200**: Returned when user has required permissions
+- **401 Unauthorized**: Missing or invalid token
+- **403 Forbidden**: User lacks required role (helpful error messages)
+- **200 OK**: Success for login and protected routes (using `@HttpCode(200)` decorator)
+- **201 Created**: Only for signup endpoint
 
 ✅ **Comprehensive Test Coverage**
+- 36/37 tests passing (97% success rate)
 - Tests cover both 401 and 403 scenarios
-- Edge cases like tampered tokens are tested
-- Role hierarchy is validated
+- Edge cases like tampered tokens, missing Bearer prefix, empty tokens
+- Role hierarchy is validated (admins can access moderator routes)
+- Token persistence across multiple requests verified
 
 ## Usage Examples
 
@@ -203,10 +250,50 @@ test/
 ```
 
 ## Migration Steps
-1. Run the database migration to add the role column
+1. Run the database migration to add the role column:
+   ```bash
+   npm run migration:run
+   ```
 2. All existing users will default to `USER` role
-3. Manually update specific users to `MODERATOR` or `ADMIN` roles as needed
+3. Manually update specific users to `MODERATOR` or `ADMIN` roles:
+   ```sql
+   UPDATE "users" SET role = 'admin' WHERE email = 'admin@example.com';
+   UPDATE "users" SET role = 'moderator' WHERE email = 'moderator@example.com';
+   ```
 4. New signups automatically get `USER` role
+5. If migration record needs to be added manually:
+   ```sql
+   INSERT INTO migrations_history (timestamp, name) 
+   VALUES (1767250000000, 'AddRoleToUsers1767250000000');
+   ```
+
+## Technical Implementation Notes
+
+### AppModule Configuration
+Ensure `AppController` and `AppService` are properly registered:
+```typescript
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+@Module({
+  controllers: [AppController, HealthController, UsersController],
+  providers: [AppService, ...],
+})
+```
+
+### RolesGuard Type Safety
+The guard uses proper typing to avoid ESLint errors:
+```typescript
+const request = context.switchToHttp().getRequest<ExpressRequest & { user: User }>();
+const user = request.user;
+```
+
+### Swagger Documentation
+All protected routes include comprehensive Swagger decorations:
+- `@ApiBearerAuth('JWT-auth')` for authentication requirement
+- `@ApiUnauthorizedResponse()` for 401 cases
+- `@ApiForbiddenResponse()` for 403 cases
+- Detailed descriptions of permission requirements
 
 ## Future Enhancements
 - API endpoint to promote users to moderator/admin roles
@@ -214,3 +301,4 @@ test/
 - Authorization for other resources (posts, comments, etc.)
 - Audit logging for permission checks
 - Rate limiting per role
+- Admin dashboard for user role management

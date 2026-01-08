@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { DataSource } from 'typeorm';
 
 describe('RBAC Authorization - Detailed (e2e)', () => {
   let app: INestApplication<App>;
@@ -35,11 +36,21 @@ describe('RBAC Authorization - Detailed (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // Clean up test users before running tests
+    const dataSource = app.get(DataSource);
+    // Delete events for test users first (if any)
+    await dataSource.query(
+      `DELETE FROM "events" WHERE "ownerId" IN (SELECT id FROM "users" WHERE email LIKE '%@test.com' OR email IN ('user@example.com', 'moderator@example.com', 'admin@example.com'))`,
+    );
+    await dataSource.query(
+      `DELETE FROM "users" WHERE email LIKE '%@test.com' OR email IN ('user@example.com', 'moderator@example.com', 'admin@example.com')`,
+    );
   });
 
   afterAll(async () => {
     await app.close();
-  });
+  }, 10000);
 
   describe('Setup: Create test users with different roles', () => {
     it('should create regular user account', async () => {
@@ -58,6 +69,13 @@ describe('RBAC Authorization - Detailed (e2e)', () => {
         .expect(201);
 
       expect(response.status).toBe(201);
+
+      // Update role to moderator
+      const dataSource = app.get(DataSource);
+      await dataSource.query(
+        `UPDATE "users" SET role = 'moderator' WHERE email = $1`,
+        [credentials.moderator.email],
+      );
     });
 
     it('should create admin account', async () => {
@@ -67,6 +85,13 @@ describe('RBAC Authorization - Detailed (e2e)', () => {
         .expect(201);
 
       expect(response.status).toBe(201);
+
+      // Update role to admin
+      const dataSource = app.get(DataSource);
+      await dataSource.query(
+        `UPDATE "users" SET role = 'admin' WHERE email = $1`,
+        [credentials.admin.email],
+      );
     });
 
     it('should login user and receive token', async () => {
