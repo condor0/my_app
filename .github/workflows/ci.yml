@@ -61,6 +61,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - name: Run DB migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpass
+          DB_DATABASE: testdb
+        run: npm run migration:run
       - run: npm run test:e2e
         env:
           DB_HOST: localhost
