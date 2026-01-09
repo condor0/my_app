@@ -100,6 +100,11 @@
       "!**/*.dto.ts",
       "!**/*.entity.ts",
       "!**/*.module.ts",
+      "!**/index.ts",
+      "!**/*.decorator.ts",
+      "!**/*.guard.ts",
+      "!**/*.strategy.ts",
+      "!**/*.controller.ts",
       "!main.ts",
       "!database/migrations/**"
     ],
