@@ -1,6 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigService
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module';
@@ -19,6 +19,7 @@ import { Organization } from './user/entities/organization.entity';
 // Observability Tools
 import { LoggingInterceptor } from './common/Interceptors/logging.interceptors';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { HttpExceptionFilter } from './filters/http-exception.filter';
 
 @Module({
   imports: [
@@ -63,6 +64,10 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
     LoggingInterceptor,
   ],

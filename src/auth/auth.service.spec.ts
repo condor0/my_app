@@ -18,6 +18,14 @@ describe('AuthService', () => {
   let jwtService: {
     sign: jest.Mock;
   };
+  const mockLogger = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    trace: jest.fn(),
+    fatal: jest.fn(),
+  };
 
   const mockUser = {
     id: 1,
@@ -47,6 +55,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: jwtService,
+        },
+        {
+          provide: 'PinoLogger:AuthService',
+          useValue: mockLogger,
         },
       ],
     }).compile();
