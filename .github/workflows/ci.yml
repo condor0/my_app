@@ -69,6 +69,36 @@ jobs:
           DB_PASSWORD: testpass
           DB_DATABASE: testdb
         run: npm run migration:run
+      - name: Verify DB connectivity and schema
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpass
+          DB_DATABASE: testdb
+        run: |
+          node - <<'NODE'
+          const { Client } = require('pg');
+          (async () => {
+            const client = new Client({
+              host: process.env.DB_HOST,
+              port: Number(process.env.DB_PORT || 5432),
+              user: process.env.DB_USERNAME,
+              password: process.env.DB_PASSWORD,
+              database: process.env.DB_DATABASE,
+            });
+            await client.connect();
+            const who = await client.query('SELECT current_user, current_database()');
+            console.log('Connected as:', who.rows[0]);
+            const exists = await client.query("SELECT to_regclass('public.events') as events");
+            console.log('events table:', exists.rows[0]);
+            await client.end();
+            if (!exists.rows[0].events) {
+              console.error('events table missing after migrations');
+              process.exit(1);
+            }
+          })().catch((err) => { console.error('DB verification failed:', err); process.exit(1); });
+          NODE
       - run: npm run test:e2e
         env:
           DB_HOST: localhost
