@@ -29,7 +29,6 @@ import {
   ErrorResponseDto,
   ForbiddenResponseDto,
 } from './dto/response.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';

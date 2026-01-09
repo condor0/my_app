@@ -10,6 +10,7 @@ import {
   Request,
   HttpCode,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
   ApiUnauthorizedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -32,6 +34,7 @@ import { EventResponseDto } from './dto/event-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 import { User } from '../user/entities/user.entity';
+import { GetEventsQueryDto } from './dto/get-events-query.dto';
 
 @ApiTags('Events')
 @Controller('events')
@@ -69,11 +72,68 @@ export class EventsController {
     type: [EventResponseDto],
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['draft', 'pending', 'published', 'rejected'],
+    description: 'Filter by event status',
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    type: String,
+    description: 'Filter events on/after this date (ISO 8601)',
+    example: '2026-01-01T00:00:00Z',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    type: String,
+    description: 'Filter events on/before this date (ISO 8601)',
+    example: '2026-12-31T23:59:59Z',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search in title and description (case-insensitive)',
+    example: 'annual meeting',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: ['createdAt', 'date', 'title'],
+    description: 'Sort field',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Sort order',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (max 50)',
+    example: 20,
+  })
   @Get()
   findAll(
+    @Query() query: GetEventsQueryDto,
     @Request() req: ExpressRequest & { user: User },
-  ): Promise<EventResponseDto[]> {
-    return this.eventsService.findAll(req.user);
+  ): Promise<{
+    data: EventResponseDto[];
+    meta: { total: number; page: number; limit: number };
+  }> {
+    return this.eventsService.findAll(req.user, query);
   }
 
   @ApiOperation({ summary: 'Get event by ID (org-scoped)' })

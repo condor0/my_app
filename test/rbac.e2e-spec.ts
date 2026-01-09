@@ -11,19 +11,21 @@ describe('RBAC Authorization - Detailed (e2e)', () => {
   let moderatorToken: string;
   let adminToken: string;
 
+  const timestamp = Date.now();
+
   const credentials = {
     user: {
-      email: 'rbac.user@test.com',
+      email: `rbac.user-${timestamp}@test.com`,
       password: 'TestPass123!',
       name: 'RBAC User',
     },
     moderator: {
-      email: 'rbac.moderator@test.com',
+      email: `rbac.moderator-${timestamp}@test.com`,
       password: 'TestPass123!',
       name: 'RBAC Moderator',
     },
     admin: {
-      email: 'rbac.admin@test.com',
+      email: `rbac.admin-${timestamp}@test.com`,
       password: 'TestPass123!',
       name: 'RBAC Admin',
     },

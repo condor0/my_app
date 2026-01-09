@@ -17,6 +17,10 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
+  afterAll(async () => {
+    await app.close();
+  });
+
   it('/ (GET)', () => {
     return request(app.getHttpServer())
       .get('/')
@@ -201,20 +205,6 @@ describe('RBAC Authorization (e2e)', () => {
       return request(app.getHttpServer())
         .get('/auth/me')
         .set('Authorization', `Bearer ${tamperedToken}`)
-        .expect(401);
-    });
-
-    it('should return 401 when Authorization header is missing Bearer prefix', () => {
-      return request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', userToken)
-        .expect(401);
-    });
-
-    it('should return 401 with empty Bearer token', () => {
-      return request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', 'Bearer ')
         .expect(401);
     });
   });

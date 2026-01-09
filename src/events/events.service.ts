@@ -15,6 +15,7 @@ import { RejectEventDto } from './dto/reject-event.dto';
 import { EventStatus } from './enums/event-status.enum';
 import { User } from '../user/entities/user.entity';
 import { Role } from '../auth/enums/role.enum';
+import { GetEventsQueryDto } from './dto/get-events-query.dto';
 
 @Injectable()
 export class EventsService {
@@ -48,16 +49,78 @@ export class EventsService {
     return savedEvent;
   }
 
-  async findAll(user: User): Promise<Event[]> {
+  async findAll(
+    user: User,
+    query: GetEventsQueryDto,
+  ): Promise<{
+    data: Event[];
+    meta: { total: number; page: number; limit: number };
+  }> {
+    const {
+      status,
+      dateFrom,
+      dateTo,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+      page = 1,
+      limit = 20,
+    } = query;
+
     if (!user.organizationId) {
-      return [];
+      return {
+        data: [],
+        meta: { total: 0, page, limit },
+      };
     }
 
-    // Only return events from user's organization
-    return this.eventsRepository.find({
-      where: { organizationId: user.organizationId },
-      order: { createdAt: 'DESC' },
+    const qb = this.eventsRepository.createQueryBuilder('event');
+
+    qb.where('event.organizationId = :orgId', {
+      orgId: user.organizationId,
     });
+
+    if (status) {
+      qb.andWhere('event.status = :status', { status });
+    }
+
+    if (dateFrom) {
+      qb.andWhere('event.date >= :dateFrom', { dateFrom });
+    }
+
+    if (dateTo) {
+      qb.andWhere('event.date <= :dateTo', { dateTo });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(event.title ILIKE :search OR event.description ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const sortFieldMap: Record<string, string> = {
+      createdAt: 'event.createdAt',
+      date: 'event.date',
+      title: 'event.title',
+    };
+
+    const sortField = sortFieldMap[sortBy] ?? sortFieldMap.createdAt;
+    qb.orderBy(sortField, sortOrder);
+
+    const skip = (page - 1) * limit;
+    qb.skip(skip).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+      },
+    };
   }
 
   async findOne(id: number, user: User): Promise<Event> {

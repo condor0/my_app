@@ -11,20 +11,22 @@ describe('Events CRUD (e2e)', () => {
   let user2Token: string;
   let eventId: number;
 
+  const timestamp = Date.now();
+
   const testUser1 = {
-    email: 'event-user1@test.com',
+    email: `event-user1-${timestamp}@test.com`,
     password: 'Password123!',
     name: 'Event User 1',
   };
 
   const testUser2 = {
-    email: 'event-user2@test.com',
+    email: `event-user2-${timestamp}@test.com`,
     password: 'Password123!',
     name: 'Event User 2',
   };
 
   const testOrg = {
-    name: 'Test Events Org',
+    name: `Test Events Org ${timestamp}`,
   };
 
   const testEvent = {
@@ -108,6 +110,15 @@ describe('Events CRUD (e2e)', () => {
       .expect(200);
 
     user2Token = (loginResponse2.body as { accessToken: string }).accessToken;
+
+    // Create initial event for GET tests
+    const createResponse = await request(app.getHttpServer())
+      .post('/events')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send(testEvent)
+      .expect(201);
+
+    eventId = (createResponse.body as { id: number }).id;
   });
 
   afterAll(async () => {
@@ -164,9 +175,11 @@ describe('Events CRUD (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect((response.body as Array<unknown>).length).toBeGreaterThan(0);
-      expect((response.body as Array<unknown>)[0]).toHaveProperty(
+      expect(response.body).toHaveProperty('data');
+      expect(response.body).toHaveProperty('meta');
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect((response.body.data as Array<unknown>).length).toBeGreaterThan(0);
+      expect((response.body.data as Array<unknown>)[0]).toHaveProperty(
         'organizationId',
       );
     });
@@ -289,7 +302,7 @@ describe('Events CRUD (e2e)', () => {
         .set('Authorization', `Bearer ${user2Token}`)
         .expect(200);
 
-      const foundEvent = (response2.body as Array<{ id: number }>).find(
+      const foundEvent = (response2.body.data as Array<{ id: number }>).find(
         (e: { id: number }) => e.id === (event1.body as { id: number }).id,
       );
       expect(foundEvent).toBeDefined();
