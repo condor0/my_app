@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventsService } from './events.service';
 import { Event } from './entities/event.entity';
 import { EventStatus } from './enums/event-status.enum';
-import { Role } from '../auth/enums/role.enum';
+import { Role, DomainEventEmitter } from '../shared';
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 
 describe('EventsService', () => {
@@ -22,6 +22,12 @@ describe('EventsService', () => {
     debug: jest.fn(),
     trace: jest.fn(),
     fatal: jest.fn(),
+  };
+
+  const mockEventEmitter = {
+    emit: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(),
+    clearAll: jest.fn(),
   };
 
   const baseUser = {
@@ -83,6 +89,10 @@ describe('EventsService', () => {
         {
           provide: 'PinoLogger:EventsService',
           useValue: mockLogger,
+        },
+        {
+          provide: DomainEventEmitter,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();

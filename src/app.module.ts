@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigSe
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
+import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { AppController } from './app.controller';
@@ -54,6 +55,7 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
     }),
 
     // 4. Feature Modules
+    SharedModule, // Global module for cross-cutting concerns
     AuthModule,
     EventsModule,
     TypeOrmModule.forFeature([User, Organization]),

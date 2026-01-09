@@ -14,8 +14,16 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { RejectEventDto } from './dto/reject-event.dto';
 import { EventStatus } from './enums/event-status.enum';
 import { User } from '../user/entities/user.entity';
-import { Role } from '../auth/enums/role.enum';
+import { Role } from '../shared';
 import { GetEventsQueryDto } from './dto/get-events-query.dto';
+import {
+  DomainEventEmitter,
+  createEventCreatedEvent,
+  createEventSubmittedEvent,
+  createEventApprovedEvent,
+  createEventRejectedEvent,
+  createEventDeletedEvent,
+} from '../shared';
 
 @Injectable()
 export class EventsService {
@@ -24,6 +32,7 @@ export class EventsService {
     private eventsRepository: Repository<Event>,
     @InjectPinoLogger(EventsService.name)
     private readonly logger: PinoLogger,
+    private readonly eventEmitter: DomainEventEmitter,
   ) {}
 
   async create(createEventDto: CreateEventDto, user: User): Promise<Event> {
@@ -46,6 +55,17 @@ export class EventsService {
 
     const savedEvent = await this.eventsRepository.save(event);
     this.logger.info({ eventId: savedEvent.id }, 'Event created successfully');
+
+    // Emit domain event
+    await this.eventEmitter.emit(
+      createEventCreatedEvent({
+        eventId: savedEvent.id,
+        title: savedEvent.title,
+        ownerId: savedEvent.ownerId,
+        organizationId: savedEvent.organizationId,
+      }),
+    );
+
     return savedEvent;
   }
 
@@ -180,7 +200,16 @@ export class EventsService {
       throw new ForbiddenException('Only draft events can be deleted');
     }
 
+    const eventId = event.id;
     await this.eventsRepository.remove(event);
+
+    // Emit domain event
+    await this.eventEmitter.emit(
+      createEventDeletedEvent({
+        eventId,
+        deletedBy: user.id,
+      }),
+    );
   }
 
   // State transition: draft -> pending (submit for review)
@@ -214,6 +243,17 @@ export class EventsService {
       { eventId: id, newStatus: EventStatus.PENDING },
       'Event submitted for review',
     );
+
+    // Emit domain event
+    await this.eventEmitter.emit(
+      createEventSubmittedEvent({
+        eventId: savedEvent.id,
+        title: savedEvent.title,
+        ownerId: savedEvent.ownerId,
+        organizationId: savedEvent.organizationId,
+      }),
+    );
+
     return savedEvent;
   }
 
@@ -251,6 +291,16 @@ export class EventsService {
       { eventId: id, moderatorId: user.id, newStatus: EventStatus.PUBLISHED },
       'Event approved and published',
     );
+
+    // Emit domain event
+    await this.eventEmitter.emit(
+      createEventApprovedEvent({
+        eventId: savedEvent.id,
+        title: savedEvent.title,
+        approvedBy: user.id,
+      }),
+    );
+
     return savedEvent;
   }
 
@@ -297,6 +347,17 @@ export class EventsService {
       },
       'Event rejected',
     );
+
+    // Emit domain event
+    await this.eventEmitter.emit(
+      createEventRejectedEvent({
+        eventId: savedEvent.id,
+        title: savedEvent.title,
+        rejectedBy: user.id,
+        reason: rejectEventDto.rejectReason,
+      }),
+    );
+
     return savedEvent;
   }
 }

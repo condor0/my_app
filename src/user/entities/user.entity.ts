@@ -1,6 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Organization } from './organization.entity';
-import { Role } from '../../auth/enums/role.enum';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Role } from '../../shared/enums/role.enum';
+import type { Organization } from './organization.entity';
 
 @Entity('users')
 export class User {
@@ -23,6 +29,8 @@ export class User {
   organizationId?: number;
 
   // Many users belong to one organization
-  @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'CASCADE' })
-  organization: Organization;
+  // Use string reference to avoid circular import
+  @ManyToOne('Organization', 'users', { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organizationId' })
+  organization?: Organization;
 }

@@ -5,6 +5,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { DomainEventEmitter } from '../shared';
 
 jest.mock('argon2');
 
@@ -25,6 +26,11 @@ describe('AuthService', () => {
     debug: jest.fn(),
     trace: jest.fn(),
     fatal: jest.fn(),
+  };
+  const mockEventEmitter = {
+    emit: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(),
+    clearAll: jest.fn(),
   };
 
   const mockUser = {
@@ -59,6 +65,10 @@ describe('AuthService', () => {
         {
           provide: 'PinoLogger:AuthService',
           useValue: mockLogger,
+        },
+        {
+          provide: DomainEventEmitter,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();

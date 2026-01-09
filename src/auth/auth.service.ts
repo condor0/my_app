@@ -11,6 +11,11 @@ import { User } from '../user/entities/user.entity';
 import * as argon2 from 'argon2';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import {
+  DomainEventEmitter,
+  createUserRegisteredEvent,
+  createUserLoggedInEvent,
+} from '../shared';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectPinoLogger(AuthService.name)
     private readonly logger: PinoLogger,
+    private readonly eventEmitter: DomainEventEmitter,
   ) {}
 
   async signup(signupDto: SignupDto): Promise<void> {
@@ -48,6 +54,15 @@ export class AuthService {
       { userId: user.id, email },
       'User registered successfully',
     );
+
+    // Emit domain event for other modules to react
+    await this.eventEmitter.emit(
+      createUserRegisteredEvent({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+      }),
+    );
   }
 
   async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
@@ -65,6 +80,14 @@ export class AuthService {
       this.logger.info(
         { userId: user.id, email, role: user.role },
         'User logged in successfully',
+      );
+
+      // Emit domain event for other modules to react
+      await this.eventEmitter.emit(
+        createUserLoggedInEvent({
+          userId: user.id,
+          email: user.email,
+        }),
       );
 
       return { accessToken };
