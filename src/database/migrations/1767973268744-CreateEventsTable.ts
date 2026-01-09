@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateEventsTable1767973268744 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'events_status_enum') THEN
@@ -12,7 +12,7 @@ export class CreateEventsTable1767973268744 implements MigrationInterface {
             $$;
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             DO $$
             BEGIN
                 IF NOT EXISTS (
@@ -40,10 +40,10 @@ export class CreateEventsTable1767973268744 implements MigrationInterface {
             END
             $$;
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             DO $$
             BEGIN
                 IF EXISTS (
@@ -58,8 +58,6 @@ export class CreateEventsTable1767973268744 implements MigrationInterface {
             $$;
         `);
 
-        await queryRunner.query(
-            `DROP TYPE IF EXISTS "events_status_enum"`,
-        );
-    }
+    await queryRunner.query(`DROP TYPE IF EXISTS "events_status_enum"`);
+  }
 }
