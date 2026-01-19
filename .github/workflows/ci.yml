@@ -107,6 +107,8 @@ jobs:
           DB_PASSWORD: testpass
           DB_DATABASE: testdb
           JWT_SECRET: test-secret-key
+        # Note: microservices-smoke tests are excluded (jest-e2e.json)
+        # They require full docker-compose stack and are for local testing only
 
   build:
     name: Build

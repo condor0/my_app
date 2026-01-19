@@ -5,8 +5,10 @@
 // 1. Auth Service: Login, Signup, Token Validation
 // 2. Events Service: CRUD operations via Gateway
 //
-// Run with: npm run test:e2e:microservices
+// Run with: npm run test:e2e -- --testPathPatterns="microservices-smoke"
 // Requires: All services running (docker-compose up)
+// NoTE: This test is excluded from CI (jest-e2e.json) because it requires
+// a full microservices stack. It's designed for local testing only.
 // ============================================================================
 
 import request from 'supertest';
