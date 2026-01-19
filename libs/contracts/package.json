@@ -1,0 +1,14 @@
+{
+  "name": "@my-app/contracts",
+  "version": "1.0.0",
+  "description": "Shared contracts between microservices",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "class-validator": "^0.14.3",
+    "@nestjs/microservices": "^11.0.1"
+  }
+}

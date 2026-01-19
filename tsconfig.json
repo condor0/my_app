@@ -20,6 +20,10 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@libscontracts": ["libs/contracts/src/index.ts"],
+      "@libscontracts/*": ["libs/contracts/src/*"]
+    }
   }
 }

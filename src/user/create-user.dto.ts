@@ -12,4 +12,5 @@ export class CreateUserDto {
   @IsInt()
   @Min(1)
   age: number;
+  email: any;
 }
