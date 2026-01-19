@@ -12,9 +12,9 @@ export default new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'user',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || 'myapp',
+  username: process.env.DB_USERNAME || 'testuser',
+  password: process.env.DB_PASSWORD || 'testpass',
+  database: process.env.DB_DATABASE || 'testdb',
   // 1. Register entities here
   entities: [User, Organization, Event],
   // 2. STOP AUTO-SYNC: Enforce migration-only changes

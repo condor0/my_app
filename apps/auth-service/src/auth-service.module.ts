@@ -59,7 +59,7 @@ import { User } from './entities/user.entity';
         type: 'postgres',
         host: configService.get<string>('DB_HOST', 'localhost'),
         port: configService.get<number>('DB_PORT', 5432),
-        username: configService.get<string>('DB_USERNAME', 'user'),
+        username: configService.get<string>('DB_USERNAME', 'testuser'),
         password: configService.get<string>('DB_PASSWORD', 'password'),
         database: configService.get<string>('DB_DATABASE', 'myapp'),
         entities: [User],
