@@ -27,7 +27,9 @@
     "microservices": "docker-compose up --build",
     "microservices:detach": "docker-compose up --build -d",
     "microservices:down": "docker-compose down",
-    "microservices:logs": "docker-compose logs -f"
+    "microservices:logs": "docker-compose logs -f",
+    "prod:start": "npm run microservices:detach && echo \"System starting... wait 30 seconds for all services to be ready\" && timeout 30 npm run microservices:logs 2>/dev/null || true && echo \"\" && echo \"✓ System ready! Run: npm run demo\" || echo \"✓ System started in background\"",
+    "demo": "bash demo-checklist.sh || powershell -File demo-checklist.ps1"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

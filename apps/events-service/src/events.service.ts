@@ -100,7 +100,7 @@ export class EventsService {
     if (search) {
       qb.andWhere(
         '(LOWER(event.title) LIKE LOWER(:search) OR LOWER(event.description) LIKE LOWER(:search))',
-        { search: `%${search as string}%` },
+        { search: `%${search}%` },
       );
     }
 
@@ -115,8 +115,8 @@ export class EventsService {
     const total = await qb.getCount();
 
     // Apply pagination
-    const skip = ((page as number) - 1) * (limit as number);
-    qb.skip(skip).take(limit as number);
+    const skip = (page - 1) * limit;
+    qb.skip(skip).take(limit);
 
     const events = await qb.getMany();
 

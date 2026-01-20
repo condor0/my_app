@@ -40,7 +40,7 @@ export class AuthService {
     }
 
     // Hash password with argon2
-    const hashedPassword = await argon2.hash(password as string);
+    const hashedPassword = await argon2.hash(password);
 
     // Create and save user
     const user = this.usersRepository.create({
@@ -64,7 +64,7 @@ export class AuthService {
 
     const user = await this.usersRepository.findOne({ where: { email } });
 
-    if (!user || !(await argon2.verify(user.password, password as string))) {
+    if (!user || !(await argon2.verify(user.password, password))) {
       throw new Error('Invalid credentials');
     }
 

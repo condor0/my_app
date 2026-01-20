@@ -112,7 +112,6 @@ export class AuthController {
     );
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const result = await this.authService.validateToken(data.token);
       return ServiceResponse.ok(result);
     } catch (err) {
@@ -141,7 +140,6 @@ export class AuthController {
     );
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const user = await this.authService.getUserById(data.userId);
       return ServiceResponse.ok(user);
     } catch (err) {

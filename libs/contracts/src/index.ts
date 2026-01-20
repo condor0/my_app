@@ -9,3 +9,7 @@ export * from './dto';
 
 // Interfaces - Shared types and interfaces
 export * from './interfaces';
+
+// Utilities - Retry logic, resilient clients, and helpers
+export * from './utils/retry.utils';
+export * from './utils/resilient-client';
