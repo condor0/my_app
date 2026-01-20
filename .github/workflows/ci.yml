@@ -30,12 +30,13 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test:cov:ci
-      - name: Upload coverage
+      - name: Upload coverage (if exists)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('coverage/**') != ''
         with:
           name: coverage
           path: coverage/
+          if-no-files-found: ignore
 
   e2e:
     name: E2E Tests
@@ -122,9 +123,11 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - name: Upload dist
+      - name: Upload dist (if exists)
         uses: actions/upload-artifact@v4
+        if: always() && hashFiles('dist/**') != ''
         with:
           name: dist
           path: dist/
           retention-days: 7
+          if-no-files-found: ignore
