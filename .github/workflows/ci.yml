@@ -30,6 +30,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test:cov:ci
+        # Note: Coverage thresholds are configured in package.json jest.coverageThreshold
+        # Thresholds: global 20-30%, auth 15-25%, events 15-35%
+        # View coverage report in coverage/ directory after test run
       - name: Upload coverage (if exists)
         uses: actions/upload-artifact@v4
         if: always() && hashFiles('coverage/**') != ''
