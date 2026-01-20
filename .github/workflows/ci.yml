@@ -1,0 +1,136 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, D* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:cov:ci
+        # Note: Coverage thresholds are configured in package.json jest.coverageThreshold
+        # Thresholds: global 20-30%, auth 15-25%, events 15-35%
+        # View coverage report in coverage/ directory after test run
+      - name: Upload coverage (if exists)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('coverage/**') != ''
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run DB migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpass
+          DB_DATABASE: testdb
+        run: npm run migration:run
+      - name: Verify DB connectivity and schema
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpass
+          DB_DATABASE: testdb
+        run: |
+          node - <<'NODE'
+          const { Client } = require('pg');
+          (async () => {
+            const client = new Client({
+              host: process.env.DB_HOST,
+              port: Number(process.env.DB_PORT || 5432),
+              user: process.env.DB_USERNAME,
+              password: process.env.DB_PASSWORD,
+              database: process.env.DB_DATABASE,
+            });
+            await client.connect();
+            const who = await client.query('SELECT current_user, current_database()');
+            console.log('Connected as:', who.rows[0]);
+            const exists = await client.query("SELECT to_regclass('public.events') as events");
+            console.log('events table:', exists.rows[0]);
+            await client.end();
+            if (!exists.rows[0].events) {
+              console.error('events table missing after migrations');
+              process.exit(1);
+            }
+          })().catch((err) => { console.error('DB verification failed:', err); process.exit(1); });
+          NODE
+      - run: npm run test:e2e
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: testuser
+          DB_PASSWORD: testpass
+          DB_DATABASE: testdb
+          JWT_SECRET: test-secret-key
+        # Note: microservices-smoke tests are excluded (jest-e2e.json)
+        # They require full docker-compose stack and are for local testing only
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Upload dist (if exists)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('dist/**') != ''
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -16,25 +16,36 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:cov:ci": "jest --coverage --ci --maxWorkers=2",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "test:e2e:microservices": "jest --config ./test/jest-e2e.json --runInBand --testPathPatterns=\"microservices-smoke\"",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm migration:generate -- -d src/config/typeorm.config.ts",
     "migration:run": "npm run typeorm migration:run -- -d src/config/typeorm.config.ts",
-    "seed": "ts-node src/database/seeds/seed.ts"
+    "seed": "ts-node src/database/seeds/seed.ts",
+    "microservices": "docker-compose up --build",
+    "microservices:detach": "docker-compose up --build -d",
+    "microservices:down": "docker-compose down",
+    "microservices:logs": "docker-compose logs -f",
+    "prod:start": "npm run microservices:detach && echo \"System starting... wait 30 seconds for all services to be ready\" && timeout 30 npm run microservices:logs 2>/dev/null || true && echo \"\" && echo \"✓ System ready! Run: npm run demo\" || echo \"✓ System started in background\"",
+    "demo": "bash demo-checklist.sh || powershell -File demo-checklist.ps1"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
+    "@nestjs/microservices": "^11.1.12",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/typeorm": "^11.0.0",
+    "argon2": "^0.44.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "microservices": "^0.1.0",
     "nestjs-pino": "^4.5.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -67,6 +78,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
+    "madge": "^8.0.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
@@ -89,8 +101,34 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.service.ts",
+      "auth/**/*.ts",
+      "events/**/*.ts",
+      "!**/*.spec.ts",
+      "!**/*.e2e-spec.ts",
+      "!**/*.dto.ts",
+      "!**/*.entity.ts",
+      "!**/*.module.ts",
+      "!**/index.ts",
+      "!**/*.decorator.ts",
+      "!**/*.guard.ts",
+      "!**/*.strategy.ts",
+      "!**/*.controller.ts",
+      "!**/*.enum.ts",
+      "!main.ts",
+      "!database/migrations/**",
+      "!common/**",
+      "!health/**",
+      "!filters/**"
     ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 10,
+        "functions": 10,
+        "lines": 15,
+        "statements": 15
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

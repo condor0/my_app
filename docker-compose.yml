@@ -1,14 +1,140 @@
+# ============================================================================
+# DOCKER COMPOSE - MICROSERVICES ARCHITECTURE
+# ============================================================================
+# This docker-compose file orchestrates:
+# - PostgreSQL database
+# - Auth Service (TCP port 3001)
+# - Events Service (TCP port 3002)  
+# - API Gateway (HTTP port 3000)
+# ============================================================================
+
 services:
+  # ==========================================================================
+  # DATABASE
+  # ==========================================================================
   postgres:
     image: postgres:15
+    container_name: myapp-postgres
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: myapp
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U user -d myapp']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myapp-network
 
+  # ==========================================================================
+  # AUTH SERVICE (Microservice)
+  # ==========================================================================
+  # Handles: login, signup, token validation
+  # Transport: TCP on port 3001
+  # ==========================================================================
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: myapp-auth-service
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      DB_DATABASE: myapp
+      # JWT
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 1h
+      # Service
+      AUTH_SERVICE_HOST: 0.0.0.0
+      AUTH_SERVICE_PORT: 3001
+      NODE_ENV: development
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - myapp-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # EVENTS SERVICE (Microservice)
+  # ==========================================================================
+  # Handles: event CRUD, workflow (submit, approve, reject)
+  # Transport: TCP on port 3002
+  # ==========================================================================
+  events-service:
+    build:
+      context: .
+      dockerfile: apps/events-service/Dockerfile
+    container_name: myapp-events-service
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      DB_DATABASE: myapp
+      # Service
+      EVENTS_SERVICE_HOST: 0.0.0.0
+      EVENTS_SERVICE_PORT: 3002
+      NODE_ENV: development
+    ports:
+      - '3002:3002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - myapp-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # API GATEWAY
+  # ==========================================================================
+  # Single entry point for all HTTP requests
+  # Routes requests to appropriate microservices via TCP
+  # ==========================================================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: myapp-api-gateway
+    environment:
+      # Gateway
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 3000
+      # Service Discovery (Docker DNS)
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 3001
+      EVENTS_SERVICE_HOST: events-service
+      EVENTS_SERVICE_PORT: 3002
+      NODE_ENV: development
+    ports:
+      - '3000:3000'
+    depends_on:
+      - auth-service
+      - events-service
+    networks:
+      - myapp-network
+    restart: unless-stopped
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+networks:
+  myapp-network:
+    driver: bridge
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
 volumes:
   postgres_data:

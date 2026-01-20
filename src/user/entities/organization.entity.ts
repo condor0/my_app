@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { User } from './user.entity';
+import type { User } from './user.entity';
 
 @Entity('organizations')
 export class Organization {
@@ -10,6 +10,7 @@ export class Organization {
   name: string;
 
   // An organization can have many users
-  @OneToMany(() => User, (user) => user.organization)
-  users: User[];
+  // Use string reference to avoid circular import
+  @OneToMany('User', 'organization')
+  users?: User[];
 }
